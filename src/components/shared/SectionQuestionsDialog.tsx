@@ -26,6 +26,7 @@ export default function SectionQuestionsDialog({
   groupId,
   marks = 4,
   negativeMarks = 1,
+  alreadyUsedQuestionIds = [],
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -35,6 +36,8 @@ export default function SectionQuestionsDialog({
   groupId?: string;
   marks?: number;
   negativeMarks?: number;
+  /** Question IDs already used in other tests of this group – shown at top with highlight */
+  alreadyUsedQuestionIds?: string[];
 }) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -57,9 +60,18 @@ export default function SectionQuestionsDialog({
   const [selectedSubjects, setSelectedSubjects] = useState<Option[]>([]);
 
   // Memoized filter arrays to prevent unnecessary re-renders
-  const examIds = useMemo(() => selectedExams.map(exam => exam.value), [selectedExams]);
-  const classIds = useMemo(() => selectedClasses.map(classItem => classItem.value), [selectedClasses]);
-  const subjectIds = useMemo(() => selectedSubjects.map(subject => subject.value), [selectedSubjects]);
+  const examIds = useMemo(
+    () => selectedExams.map((exam) => exam.value),
+    [selectedExams]
+  );
+  const classIds = useMemo(
+    () => selectedClasses.map((classItem) => classItem.value),
+    [selectedClasses]
+  );
+  const subjectIds = useMemo(
+    () => selectedSubjects.map((subject) => subject.value),
+    [selectedSubjects]
+  );
 
   useEffect(() => {
     // Populate selectedMap from initialSelected only when dialog opens
@@ -98,6 +110,21 @@ export default function SectionQuestionsDialog({
   const options: any[] = data?.data?.data?.questions || [];
   const totalPages = data?.data?.data?.pagination?.totalPages || 1;
 
+  // Per-page: sort so already-used questions appear at top; use Set for O(1) lookup
+  const alreadyUsedSet = useMemo(
+    () => new Set(alreadyUsedQuestionIds),
+    [alreadyUsedQuestionIds]
+  );
+  const sortedOptions = useMemo(() => {
+    if (alreadyUsedSet.size === 0) return options;
+    return [...options].sort((a, b) => {
+      const aUsed = alreadyUsedSet.has(a._id);
+      const bUsed = alreadyUsedSet.has(b._id);
+      if (aUsed && !bUsed) return -1;
+      if (!aUsed && bUsed) return 1;
+      return 0;
+    });
+  }, [options, alreadyUsedSet]);
 
   // Selection logic
   const isSelected = (id: string) => !!selectedMap[id];
@@ -128,200 +155,232 @@ export default function SectionQuestionsDialog({
       <DialogContent className="max-w-4xl max-h-[95vh] sm:max-h-[90vh] flex flex-col p-4 sm:p-6">
         <MathJaxProvider>
           <DialogHeader className="flex-shrink-0 pb-4">
-            <DialogTitle className="text-lg sm:text-xl">Manage Section Questions</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">
+              Manage Section Questions
+            </DialogTitle>
           </DialogHeader>
-        <div className="flex-1 overflow-y-auto space-y-4 min-h-0">
-          {/* Search and Language Controls */}
-          <div className="space-y-3">
-            <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-md text-sm">
-              Questions in the question bank may have some mistakes, kindly check those questions before implementation.
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="flex gap-2 items-center flex-1 min-w-0">
-                <Input
-                  placeholder={
-                    lang === "en"
-                      ? "Search questions (English)..."
-                      : "Search questions (Hindi)..."
-                  }
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setPage(1);
-                  }}
-                  className="flex-1 text-sm"
-                />
-                <div className="flex gap-1 items-center flex-shrink-0">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={lang === "en" ? "default" : "outline"}
-                    onClick={() => setLang("en")}
-                    className="px-3"
-                  >
-                    EN
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={lang === "hi" ? "default" : "outline"}
-                    onClick={() => setLang("hi")}
-                    className="px-3"
-                  >
-                    HI
-                  </Button>
+          <div className="flex-1 overflow-y-auto space-y-4 min-h-0">
+            {/* Search and Language Controls */}
+            <div className="space-y-3">
+              <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-md text-sm">
+                Questions in the question bank may have some mistakes, kindly
+                check those questions before implementation.
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="flex gap-2 items-center flex-1 min-w-0">
+                  <Input
+                    placeholder={
+                      lang === "en"
+                        ? "Search questions (English)..."
+                        : "Search questions (Hindi)..."
+                    }
+                    value={search}
+                    onChange={(e) => {
+                      setSearch(e.target.value);
+                      setPage(1);
+                    }}
+                    className="flex-1 text-sm"
+                  />
+                  <div className="flex gap-1 items-center flex-shrink-0">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={lang === "en" ? "default" : "outline"}
+                      onClick={() => setLang("en")}
+                      className="px-3"
+                    >
+                      EN
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={lang === "hi" ? "default" : "outline"}
+                      onClick={() => setLang("hi")}
+                      className="px-3"
+                    >
+                      HI
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex gap-2 items-center">
+                  <CreateQuestionDialog
+                    trigger={
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="text-xs"
+                      >
+                        + New Question
+                      </Button>
+                    }
+                    onSuccess={handleCreateQuestion}
+                    groupId={groupId}
+                    marks={marks}
+                    negativeMarks={negativeMarks}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {Object.keys(selectedMap).length} selected
+                  </p>
                 </div>
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex gap-2 items-center">
-                <CreateQuestionDialog
-                  trigger={
-                    <Button type="button" size="sm" variant="outline" className="text-xs">
-                      + New Question
-                    </Button>
-                  }
-                  onSuccess={handleCreateQuestion}
-                  groupId={groupId}
-                  marks={marks}
-                  negativeMarks={negativeMarks}
+            {/* Filter Selectors */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-700">
+                  Exam Filter
+                </label>
+                <ExamSelector
+                  value={selectedExams}
+                  onChange={(val) => {
+                    setSelectedExams(val);
+                    setPage(1);
+                  }}
+                  multiple={true}
                 />
-                <p className="text-xs text-muted-foreground">
-                  {Object.keys(selectedMap).length} selected
-                </p>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-gray-700">
+                  Class Filter
+                </label>
+                <ClassSelector
+                  value={selectedClasses}
+                  onChange={(val) => {
+                    setSelectedClasses(val);
+                    setPage(1);
+                  }}
+                />
+              </div>
+              <div className="space-y-1 sm:col-span-2 lg:col-span-1">
+                <label className="text-xs font-medium text-gray-700">
+                  Subject Filter
+                </label>
+                <SubjectSelector
+                  value={selectedSubjects}
+                  onChange={(val) => {
+                    setSelectedSubjects(val);
+                    setPage(1);
+                  }}
+                />
               </div>
             </div>
-          </div>
 
-          {/* Filter Selectors */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">Exam Filter</label>
-              <ExamSelector
-                value={selectedExams}
-                onChange={(val) => {
-                  setSelectedExams(val);
-                  setPage(1);
-                }}
-                multiple={true}
-              />
+            {/* Clear Filters Button */}
+            {(selectedExams.length > 0 ||
+              selectedClasses.length > 0 ||
+              selectedSubjects.length > 0) && (
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedExams([]);
+                    setSelectedClasses([]);
+                    setSelectedSubjects([]);
+                    setPage(1);
+                  }}
+                  className="text-xs"
+                >
+                  Clear all filters
+                </Button>
+              </div>
+            )}
+            {/* Question list with checkboxes */}
+            <div className="border rounded-md divide-y h-fit overflow-y-auto">
+              {isLoading ? (
+                <div className="p-4 text-center text-muted-foreground text-sm">
+                  Loading...
+                </div>
+              ) : sortedOptions.length === 0 ? (
+                <div className="p-4 text-center text-muted-foreground text-sm">
+                  No questions found.
+                </div>
+              ) : (
+                sortedOptions.map((q) => {
+                  const isPreviouslyUsed = alreadyUsedSet.has(q._id);
+                  return (
+                    <label
+                      key={q._id}
+                      className={`flex items-center gap-2 px-3 py-2 cursor-pointer text-sm ${
+                        isPreviouslyUsed
+                          ? "bg-amber-50 border-l-4 border-amber-400 hover:bg-amber-100"
+                          : "hover:bg-gray-50"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected(q._id)}
+                        onChange={() => toggleSelect(q)}
+                        className="accent-blue-600"
+                      />
+                      <span className="line-clamp-2 flex-1">
+                        {q.serial_no && (
+                          <span className="font-mono text-xs text-gray-500 mr-2">
+                            #{q.serial_no}
+                          </span>
+                        )}
+                        <MathText
+                          text={lang === "hi" && q.text_hi ? q.text_hi : q.text}
+                          inline
+                        />
+                      </span>
+                      {isPreviouslyUsed && (
+                        <span className="flex-shrink-0 text-xs font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded">
+                          Previously used
+                        </span>
+                      )}
+                    </label>
+                  );
+                })
+              )}
             </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-gray-700">Class Filter</label>
-              <ClassSelector
-                value={selectedClasses}
-                onChange={(val) => {
-                  setSelectedClasses(val);
-                  setPage(1);
-                }}
-              />
-            </div>
-            <div className="space-y-1 sm:col-span-2 lg:col-span-1">
-              <label className="text-xs font-medium text-gray-700">Subject Filter</label>
-              <SubjectSelector
-                value={selectedSubjects}
-                onChange={(val) => {
-                  setSelectedSubjects(val);
-                  setPage(1);
-                }}
-              />
-            </div>
-          </div>
 
-          {/* Clear Filters Button */}
-          {(selectedExams.length > 0 || selectedClasses.length > 0 || selectedSubjects.length > 0) && (
-            <div className="flex justify-end">
+            {/* Pagination */}
+            <div className="flex justify-end items-center gap-2 pt-2">
               <Button
-                type="button"
-                variant="ghost"
                 size="sm"
-                onClick={() => {
-                  setSelectedExams([]);
-                  setSelectedClasses([]);
-                  setSelectedSubjects([]);
-                  setPage(1);
-                }}
+                variant="outline"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
                 className="text-xs"
               >
-                Clear all filters
+                Prev
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                className="text-xs"
+              >
+                Next
               </Button>
             </div>
-          )}
-          {/* Question list with checkboxes */}
-          <div className="border rounded-md divide-y min-h-[200px] max-h-[300px] sm:max-h-[400px] overflow-y-auto">
-            {isLoading ? (
-              <div className="p-4 text-center text-muted-foreground text-sm">
-                Loading...
-              </div>
-            ) : options.length === 0 ? (
-              <div className="p-4 text-center text-muted-foreground text-sm">
-                No questions found.
-              </div>
-            ) : (
-              options.map((q) => (
-                <label
-                  key={q._id}
-                  className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 text-sm"
-                >
-                  <input
-                    type="checkbox"
-                    checked={isSelected(q._id)}
-                    onChange={() => toggleSelect(q)}
-                    className="accent-blue-600"
-                  />
-                  <span className="line-clamp-2">
-                    {q.serial_no && <span className="font-mono text-xs text-gray-500 mr-2">#{q.serial_no}</span>}
-                    <MathText text={lang === "hi" && q.text_hi ? q.text_hi : q.text} inline />
-                  </span>
-                </label>
-              ))
-            )}
           </div>
 
-          {/* Pagination */}
-          <div className="flex justify-end items-center gap-2 pt-2">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="text-xs"
-            >
-              Prev
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={page >= totalPages}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              className="text-xs"
-            >
-              Next
-            </Button>
+          {/* Fixed Footer */}
+          <div className="flex-shrink-0 border-t pt-4 mt-4">
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="text-sm"
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleSave} className="text-sm">
+                Save Selection
+              </Button>
+            </div>
           </div>
-        </div>
-
-        {/* Fixed Footer */}
-        <div className="flex-shrink-0 border-t pt-4 mt-4">
-          <div className="flex justify-end gap-3">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="text-sm"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSave}
-              className="text-sm"
-            >
-              Save Selection
-            </Button>
-          </div>
-        </div>
         </MathJaxProvider>
       </DialogContent>
     </Dialog>
   );
-} 
+}

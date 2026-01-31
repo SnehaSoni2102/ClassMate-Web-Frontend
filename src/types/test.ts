@@ -1,6 +1,57 @@
-export type TestStatus = 'draft' | 'scheduled' | 'active' | 'completed' | 'cancelled';
+export type TestStatus = 'draft' | 'scheduled' | 'active' | 'completed' | 'cancelled' | 'published';
 export type QuestionType = 'mcq' | 'text' | 'numeric' | 'boolean';
 export type ParticipantStatus = 'not_started' | 'in_progress' | 'completed' | 'abandoned';
+
+/** Section shape returned by group tests list API */
+export interface GroupTestSection {
+  sectionId: string;
+  questionIds: string[];
+  name: string;
+  name_hi: string;
+  order: number;
+  timeLimit: number;
+}
+
+/** Creator user object in group test list API */
+export interface GroupTestCreator {
+  _id: string;
+  phoneNumber?: string;
+  role?: string;
+  Name?: string;
+  email?: string;
+  [key: string]: unknown;
+}
+
+/** Test item shape returned by group tests list API (GET /group/group-tests/:id) */
+export interface GroupTestListItem {
+  _id: string;
+  user: GroupTestCreator;
+  title: string;
+  title_hi?: string;
+  totalQuestions: number;
+  totalSections: number;
+  durationInMinutes: number;
+  totalMarks: number;
+  marksPerQuestion: number;
+  negativeMarks?: number;
+  description: string;
+  description_hi?: string;
+  languageOptions?: string[];
+  sections: GroupTestSection[];
+  type: 'mock' | 'live';
+  startDate?: string;
+  startTime?: string;
+  endDate?: string;
+  endTime?: string;
+  status: TestStatus;
+  exam: string;
+  testType: string;
+  group: string[];
+  attemptedUsers?: string[];
+  isAllIndia?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface Test {
   _id: string;

@@ -11,6 +11,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { GroupService } from "@/services/group.service";
 import { GroupApiResponse } from "@/types/group";
+import { GroupTestListItem } from "@/types/test";
 import LoadingSpinner from "@/components/ui/loading-spinner";
 import { AlertCircle } from "lucide-react";
 import {
@@ -67,6 +68,9 @@ export default function EditGroupTest() {
     [idx: number]: "en" | "hi";
   }>({});
 
+  // Question IDs already used in any test of this group (for "Manage questions" highlight)
+  const [alreadyUsedQuestionIds, setAlreadyUsedQuestionIds] = useState<string[]>([]);
+
   // Load group data
   useEffect(() => {
     const loadGroupData = async () => {
@@ -90,6 +94,31 @@ export default function EditGroupTest() {
     };
 
     loadGroupData();
+  }, [groupId]);
+
+  // Fetch group tests to collect all question IDs used in this group (for highlighting in Manage questions)
+  useEffect(() => {
+    if (!groupId) return;
+
+    const loadAlreadyUsedQuestionIds = async () => {
+      try {
+        const groupTests = await GroupService.getGroupTests(groupId);
+        const ids = new Set<string>();
+        (groupTests as GroupTestListItem[]).forEach((t) => {
+          (t.sections || []).forEach((sec) => {
+            (sec.questionIds || []).forEach((id: string) => ids.add(id));
+          });
+        });
+        setAlreadyUsedQuestionIds(Array.from(ids));
+      } catch (err: any) {
+        if (err?.statusCode !== 403 && err?.response?.status !== 403) {
+          console.error('Load group tests for question ids:', err);
+        }
+        setAlreadyUsedQuestionIds([]);
+      }
+    };
+
+    loadAlreadyUsedQuestionIds();
   }, [groupId]);
 
   // Load test data
@@ -955,6 +984,7 @@ export default function EditGroupTest() {
             groupId={groupId}
             marks={test?.marksPerQuestion || 4}
             negativeMarks={test?.negativeMarks || 1}
+            alreadyUsedQuestionIds={alreadyUsedQuestionIds}
           />
         )}
 

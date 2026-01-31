@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { GroupService } from "@/services/group.service";
 import { GroupApiResponse, GroupSearchMember } from "@/types/group";
-import { Test } from "@/types/test";
+import { GroupTestListItem } from "@/types/test";
 import LoadingSpinner from "@/components/ui/loading-spinner";
 import {
   AlertCircle,
@@ -48,7 +48,7 @@ const GroupDetail = () => {
   const { toast } = useToast();
   const [groupData, setGroupData] = useState<GroupApiResponse | null>(null);
   const [members, setMembers] = useState<GroupSearchMember[]>([]);
-  const [tests, setTests] = useState<Test[]>([]);
+  const [tests, setTests] = useState<GroupTestListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -354,6 +354,7 @@ const GroupDetail = () => {
       case "active":
         return <Play className="text-green-500" size={16} />;
       case "completed":
+      case "published":
         return <CheckCircle className="text-blue-500" size={16} />;
       case "scheduled":
         return <Clock className="text-yellow-500" size={16} />;
@@ -372,6 +373,8 @@ const GroupDetail = () => {
         return <Badge className="bg-green-100 text-green-800">Active</Badge>;
       case "completed":
         return <Badge className="bg-blue-100 text-blue-800">Completed</Badge>;
+      case "published":
+        return <Badge className="bg-blue-100 text-blue-800">Published</Badge>;
       case "scheduled":
         return (
           <Badge className="bg-yellow-100 text-yellow-800">Scheduled</Badge>

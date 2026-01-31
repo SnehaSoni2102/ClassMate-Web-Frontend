@@ -12,6 +12,7 @@ import {
   GroupApiResponse,
   GroupSearchMember,
 } from '@/types/group';
+import { GroupTestListItem } from '@/types/test';
 import { ApiResponse, API_ENDPOINTS, PaginatedResponse } from '@/types/api';
 
 export class GroupService {
@@ -413,16 +414,17 @@ export class GroupService {
   }
 
   /**
-   * Get group tests
+   * Get group tests (list from API: { success, data: GroupTestListItem[], message })
    */
-  static async getGroupTests(id: string): Promise<any[]> {
+  static async getGroupTests(id: string): Promise<GroupTestListItem[]> {
     try {
-      const response = await apiClient.get<any[]>(
+      const response = await apiClient.get<GroupTestListItem[]>(
         API_ENDPOINTS.GROUPS.FETCH_TESTS(id)
       );
 
       if (response.success) {
-        return response.data;
+        const data = response.data;
+        return Array.isArray(data) ? data : [];
       }
 
       throw new Error(response.message || 'Failed to get group tests');
