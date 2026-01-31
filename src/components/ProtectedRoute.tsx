@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { UserRole, Permission } from '@/types/auth';
@@ -25,23 +25,23 @@ const UnauthorizedPage: React.FC<{
   fallbackPath = "/dashboard" 
 }) => {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardContent className="p-6 text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertTriangle className="w-8 h-8 text-red-600" />
+          <div className="w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-8 h-8 text-destructive" />
           </div>
-          
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+
+          <h2 className="text-xl font-semibold text-foreground mb-2">
             Access Denied
           </h2>
-          
-          <p className="text-gray-600 mb-6">
+
+          <p className="text-muted-foreground mb-6">
             {message}
           </p>
-          
+
           <div className="space-y-3">
-            <Button 
+            <Button
               onClick={() => window.history.back()}
               variant="outline"
               className="w-full"
@@ -49,12 +49,9 @@ const UnauthorizedPage: React.FC<{
               <ArrowLeft className="w-4 h-4 mr-2" />
               Go Back
             </Button>
-            
-            <Button 
-              onClick={() => window.location.href = fallbackPath}
-              className="w-full"
-            >
-              Go to Dashboard
+
+            <Button asChild className="w-full">
+              <Link to={fallbackPath}>Go to Dashboard</Link>
             </Button>
           </div>
         </CardContent>
@@ -78,8 +75,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Show loading while authentication is being checked
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }

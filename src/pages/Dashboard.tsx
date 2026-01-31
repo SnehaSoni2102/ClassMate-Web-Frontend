@@ -16,7 +16,9 @@ import {
 
 // Define types for dashboard summary
 interface DashboardSummary {
-  testsAtempted: number;
+  /** Prefer testsAttempted; API may return testsAtempted (typo) */
+  testsAttempted?: number;
+  testsAtempted?: number;
   testsCreated: number;
   groupsJoined: number;
   groupsCreated: number;
@@ -48,9 +50,12 @@ const Dashboard = () => {
 
       try {
         const response = await apiClient.get<DashboardSummary>('/users/dashboard-summary');
-        setDashboardData(response.data);
+        if (response.success !== false && response.data != null) {
+          setDashboardData(response.data);
+        } else {
+          setError(response.message || 'Failed to load dashboard data');
+        }
       } catch (error: any) {
-        console.error('Dashboard load error:', error);
         setError('Failed to load dashboard data');
       } finally {
         setIsLoading(false);
@@ -65,7 +70,7 @@ const Dashboard = () => {
   const stats = [
     {
       title: 'Tests Attempted',
-      value: dashboardData?.testsAtempted || 0,
+      value: dashboardData?.testsAttempted ?? dashboardData?.testsAtempted ?? 0,
       icon: BookOpen,
       color: 'bg-blue-500'
     },

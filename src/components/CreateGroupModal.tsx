@@ -43,8 +43,7 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ isOpen, onClose, on
       try {
         const results = await UserService.searchUsers(searchQuery.trim());
         setSearchResults(results);
-      } catch (error: any) {
-        console.error('Search error:', error);
+    } catch (error: any) {
         toast({
           title: 'Search Error',
           description: 'Failed to search users. Please try again.',
@@ -165,12 +164,6 @@ const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ isOpen, onClose, on
 
       if (youtubeLink.trim()) {
         formData.append('youtubeLink', youtubeLink.trim());
-      }
-
-      // Debug: Log the form data being sent
-      console.log('Form data being sent:');
-      for (let [key, value] of formData.entries()) {
-        console.log(`${key}:`, value);
       }
 
       await GroupService.createGroup(formData);

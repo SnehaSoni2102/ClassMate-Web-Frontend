@@ -138,13 +138,10 @@ const TestPreview = () => {
       testId: testData._id,
       status: { status: 'published' }
     }, {
-      onSuccess: (response) => {
-        console.log('Test published successfully:', response);
+      onSuccess: () => {
         window.location.reload();
-        // The mutation will automatically invalidate queries, so the data will refresh
       },
-      onError: (error: any) => {
-        console.error('Publish test error:', error);
+      onError: () => {
       }
     });
   };

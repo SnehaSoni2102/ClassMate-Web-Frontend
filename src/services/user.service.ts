@@ -153,8 +153,6 @@ export class UserService {
         name: name
       });
 
-      console.log('API Response:', response); // Debug log
-
       if (response.success) {
         return response.data || [];
       }

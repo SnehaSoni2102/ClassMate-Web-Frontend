@@ -57,10 +57,8 @@ const Groups = () => {
   const loadCreatedGroups = async () => {
     try {
       const response = await UserService.getUserGroups();
-      console.log({ createdGroupsResponse: response });
       setCreatedGroups(response);
     } catch (error: any) {
-      console.error('Load created groups error:', error);
       setError('Failed to load your created groups');
     }
   };
@@ -69,10 +67,8 @@ const Groups = () => {
   const loadJoinedGroups = async () => {
     try {
       const response = await GroupService.getGroups();
-      console.log({ joinedGroupsResponse: response });
       setJoinedGroups(response);
     } catch (error: any) {
-      console.error('Load joined groups error:', error);
       setError('Failed to load your joined groups');
     }
   };
@@ -87,8 +83,7 @@ const Groups = () => {
 
       try {
         await Promise.all([loadCreatedGroups(), loadJoinedGroups()]);
-      } catch (error) {
-        console.error('Initial load error:', error);
+      } catch {
       } finally {
         setIsLoading(false);
       }

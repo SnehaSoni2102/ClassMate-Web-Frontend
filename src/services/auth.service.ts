@@ -46,8 +46,7 @@ export class AuthService {
     try {
       // Get the temp token that should be used for this request
       const tempToken = apiClient.getTempToken();
-      console.log('Using temp token for OTP verification:', tempToken);
-      
+
       const response = await apiClient.post<AuthResponse>(
         API_ENDPOINTS.AUTH.VERIFY_OTP,
         { otp: credentials.otp, phoneNumber: credentials.mobile }
@@ -56,13 +55,11 @@ export class AuthService {
       if (response.success) {
         // Clear temp token after successful verification
         apiClient.clearTempToken();
-        console.log('Cleared temp token after successful verification');
-        
+
         // The response.data contains the actual response structure
         const authData = response.data as { token: string; user: any };
-        
+
         if (authData && authData.token && authData.user) {
-          console.log('Setting auth token:', authData.token);
           apiClient.setTokens(authData.token); // No refresh token in this API
           
           return {
@@ -78,7 +75,6 @@ export class AuthService {
 
       throw new Error(response.message || 'Invalid OTP');
     } catch (error: any) {
-      console.error('Verify OTP error:', error);
       throw error;
     }
   }
@@ -95,8 +91,7 @@ export class AuthService {
   static async logout(): Promise<void> {
     try {
       await apiClient.post(API_ENDPOINTS.AUTH.LOGOUT);
-    } catch (error) {
-      console.error('Logout error:', error);
+    } catch {
       // Continue with local logout even if API call fails
     } finally {
       // Always clear local auth state
@@ -117,7 +112,6 @@ export class AuthService {
 
       throw new Error(response.message || 'Failed to get user profile');
     } catch (error: any) {
-      console.error('Get current user error:', error);
       throw error;
     }
   }

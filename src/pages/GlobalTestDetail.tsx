@@ -70,15 +70,13 @@ const GlobalTestDetail = () => {
       groupId,
       testId
     }, {
-      onSuccess: (response) => {
-        console.log('Test added to group successfully:', response);
+      onSuccess: () => {
         // Navigate back after a short delay
         setTimeout(() => {
           navigate(`/groups/${groupId}`);
         }, 2000);
       },
       onError: (error: any) => {
-        console.error('Add to group error:', error);
       }
     });
   };

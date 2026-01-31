@@ -33,6 +33,7 @@ export interface User {
   // Optional fields that might be present
   name?: string;
   email?: string;
+  permissions?: Permission[];
   subscription?: SubscriptionInfo;
   profile?: UserProfile;
 }

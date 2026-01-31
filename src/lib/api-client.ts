@@ -28,7 +28,6 @@ class ApiClient {
   }
 
   private clearAuthTokens(): void {
-    console.log('running clearAuthTokens');
     localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USER_DATA);
@@ -136,12 +135,8 @@ class ApiClient {
     
     if (token) {
       headers.Authorization = `Bearer ${token}`;
-      console.log('Using auth token for request:', url);
     } else if (tempToken && url.includes('/verify-otp')) {
       headers.Authorization = `Bearer ${tempToken}`;
-      console.log('Using temp token for OTP verification:', url);
-    } else {
-      console.log('No token available for request:', url);
     }
 
     // Handle FormData vs JSON data
@@ -181,7 +176,13 @@ class ApiClient {
 
       clearTimeout(timeoutId);
 
-      const responseData = await response.json();
+      let responseData: any;
+      try {
+        const text = await response.text();
+        responseData = text.length > 0 ? JSON.parse(text) : null;
+      } catch (parseError: any) {
+        throw parseError;
+      }
 
       if (!response.ok) {
         // Handle 401 - since there's no refresh token, just clear auth and throw error
@@ -190,6 +191,11 @@ class ApiClient {
         }
 
         throw { response: { status: response.status, data: responseData } };
+      }
+
+      // Empty body with success (e.g. 204 No Content) - return valid ApiResponse
+      if (responseData === null && response.ok) {
+        return { success: true, data: null as any, message: 'Success' };
       }
 
       // Normalize response format - if the API doesn't return success field, assume success

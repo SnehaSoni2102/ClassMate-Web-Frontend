@@ -55,8 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             // Update stored user data
             safeLocalStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(freshUser));
-          } catch (error) {
-            console.warn('Token validation failed, clearing auth state');
+          } catch {
             await clearAuthState();
           }
         } else {
@@ -67,8 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             isLoading: false
           }));
         }
-      } catch (error) {
-        console.error('Auth initialization error:', error);
+      } catch {
         setAuthState(prev => ({
           ...prev,
           isLoading: false,
@@ -185,7 +183,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setAuthState(prev => ({ ...prev, user }));
       safeLocalStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
     } catch (error: any) {
-      console.error('Refresh user error:', error);
       setAuthState(prev => ({
         ...prev,
         error: error.message || 'Failed to refresh user data'

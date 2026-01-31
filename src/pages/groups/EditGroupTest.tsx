@@ -830,7 +830,6 @@ export default function EditGroupTest() {
                                   </TableCell>
                                   <TableCell className="whitespace-pre-line max-w-xs">
                                       {(() => {
-                                        console.log('Question object:', q);
                                         const text = lang === "hi" && q.question_hi
                                           ? q.question_hi
                                           : q.question || q.text || 'No question text found';

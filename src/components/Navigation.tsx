@@ -38,8 +38,7 @@ const Navigation = () => {
       await logout();
       navigate('/');
       setIsLogoutModalOpen(false);
-    } catch (error) {
-      console.error('Logout error:', error);
+    } catch {
     }
   };
 

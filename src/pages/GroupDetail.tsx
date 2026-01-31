@@ -108,24 +108,16 @@ const GroupDetail = () => {
         // Try to fetch tests, but handle 403 gracefully for members
         try {
           const testsResponse = await GroupService.getGroupTests(id);
-          console.log("Group tests response:", testsResponse);
           setTests(testsResponse);
         } catch (testError: any) {
-          console.log("Test fetch error (may be expected for members):", testError);
-
           // If it's a 403 (Forbidden) error, it means the user doesn't have permission to view tests
           // This is expected for regular members, so we just set tests to empty array
           if (testError?.response?.status === 403 || testError?.status === 403) {
-            console.log("User doesn't have permission to view tests - this is normal for members");
             setTests([]);
-          } else {
-            // For other errors, we still want to show them
-            console.error("Unexpected error fetching tests:", testError);
-            // Don't set a global error for test fetch failures
           }
+          // Don't set a global error for test fetch failures
         }
       } catch (error: any) {
-        console.error("Load group data error:", error);
         setError(error.message || "Failed to load group details");
       } finally {
         setIsLoading(false);
@@ -199,10 +191,9 @@ const GroupDetail = () => {
         description: "Member has been promoted to manager successfully.",
       });
     } catch (error: any) {
-      console.error("Error promoting member:", error);
       toast({
         title: "Error",
-        description: error.message || "Failed to promote member to manager.",
+        description: error?.message || "Failed to promote member to manager.",
         variant: "destructive",
       });
     } finally {
@@ -226,7 +217,6 @@ const GroupDetail = () => {
         description: "Manager has been demoted to member successfully.",
       });
     } catch (error: any) {
-      console.error("Error demoting manager:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to demote manager to member.",
@@ -284,23 +274,16 @@ const GroupDetail = () => {
         description: `Group subscription payment for GroupId: ${groupData._id} & Groupname: ${groupData.title}`
       };
 
-      console.log("Creating transaction with data:", subscriptionData);
-
       // 1st API call: Create website transaction
       const transactionResponse = await GroupService.createWebsiteTransaction(subscriptionData);
       const transactionId = transactionResponse.transactionId || transactionResponse._id;
-
-      console.log("Transaction created successfully:", transactionResponse);
 
       // 2nd API call: Create transaction order
       const orderData = {
         transactionId: transactionId
       };
 
-      console.log("Creating transaction order with data:", orderData);
-
       const orderResponse = await GroupService.createTransactionOrder(orderData);
-      console.log("Transaction order response:", orderResponse);
 
       // Initialize Razorpay payment
       const options = {
@@ -311,9 +294,6 @@ const GroupDetail = () => {
         description: subscriptionData.description,
         order_id: orderResponse.id,
         handler: function (response: any) {
-          // Payment successful
-          console.log('Payment successful:', response);
-
           // Navigate to verification page with payment details
           const searchParams = new URLSearchParams({
             razorpay_order_id: response.razorpay_order_id,
@@ -333,7 +313,6 @@ const GroupDetail = () => {
         },
         modal: {
           ondismiss: function() {
-            console.log('Payment modal dismissed');
             setIsProcessingSubscription(false);
           }
         }
@@ -343,7 +322,6 @@ const GroupDetail = () => {
       rzp.open();
 
     } catch (error: any) {
-      console.error("Error during subscription purchase:", error);
       setIsProcessingSubscription(false);
       // You might want to show a toast notification or error message to the user here
     }

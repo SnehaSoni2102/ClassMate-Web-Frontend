@@ -303,7 +303,6 @@ export default function CreateGroupTest() {
       }
 
       const response = await GroupService.createGroupTest(groupId!, testData);
-      console.log({response});
       toast({
         title: "Test created successfully!",
         description: "The test has been created and added to the group.",
@@ -312,7 +311,6 @@ export default function CreateGroupTest() {
       // Redirect to test preview page
       navigate(`/groups/${groupId}/test-preview/${response._id}`);
     } catch (error: any) {
-      console.error('Create group test error:', error);
       toast({
         title: "Failed to create test",
         description: error.message || "An error occurred while creating the test.",
