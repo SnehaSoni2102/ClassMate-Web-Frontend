@@ -64,6 +64,7 @@ interface TestData {
   languageOptions: string[];
   type: string;
   status: string;
+  testType?: string;
   exam?: Exam;
   sections: Section[];
 }
@@ -362,9 +363,23 @@ const TestPreview = () => {
         return <Badge className="bg-gray-100 text-gray-800">Draft</Badge>;
       case 'completed':
         return <Badge className="bg-blue-100 text-blue-800">Completed</Badge>;
+      case 'published':
+        return <Badge className="bg-blue-100 text-blue-800">Published</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
+  };
+
+  const getTestTypeBadge = (testType?: string) => {
+    if (!testType) return null;
+    const value = String(testType).toLowerCase();
+    if (value === 'paid') {
+      return <Badge className="bg-emerald-100 text-emerald-800">Paid</Badge>;
+    }
+    if (value === 'free') {
+      return <Badge className="bg-slate-100 text-slate-700">Free</Badge>;
+    }
+    return <Badge variant="secondary">{testType}</Badge>;
   };
 
   // Loading state
@@ -525,6 +540,12 @@ const TestPreview = () => {
                       </span>
                       <span>•</span>
                       {getStatusBadge(testData.status)}
+                      {testData.testType && (
+                        <>
+                          <span>•</span>
+                          {getTestTypeBadge(testData.testType)}
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

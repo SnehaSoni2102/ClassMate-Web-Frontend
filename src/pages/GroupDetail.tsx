@@ -388,6 +388,18 @@ const GroupDetail = () => {
     }
   };
 
+  const getTestTypeBadge = (testType?: string) => {
+    if (!testType) return null;
+    const value = String(testType).toLowerCase();
+    if (value === "paid") {
+      return <Badge className="bg-emerald-100 text-emerald-800">Paid</Badge>;
+    }
+    if (value === "free") {
+      return <Badge className="bg-slate-100 text-slate-700">Free</Badge>;
+    }
+    return <Badge variant="secondary">{testType}</Badge>;
+  };
+
   // Loading state
   if (isLoading) {
     return (
@@ -954,6 +966,7 @@ const GroupDetail = () => {
                           </div>
                         </div>
                         <div className="flex items-center space-x-3">
+                          {getTestTypeBadge(test?.testType)}
                           {getTestStatusBadge(test.status)}
                           {(userRole === "group-admin" ||
                             userRole === "group-manager") && (

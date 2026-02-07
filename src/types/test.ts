@@ -44,8 +44,8 @@ export interface GroupTestListItem {
   endDate?: string;
   endTime?: string;
   status: TestStatus;
-  exam: string;
-  testType: string;
+  exam?: string;
+  testType?: string;
   group: string[];
   attemptedUsers?: string[];
   isAllIndia?: boolean;
