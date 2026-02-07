@@ -47,7 +47,6 @@ export default function TestForm({
               id="title_hi"
               value={test.title_hi}
               onChange={(e) => onTestChange("title_hi", e.target.value)}
-              required
             />
           </div>
           <div className="space-y-2">
@@ -65,7 +64,6 @@ export default function TestForm({
               id="description_hi"
               value={test.description_hi}
               onChange={(e) => onTestChange("description_hi", e.target.value)}
-              required
             />
           </div>
 

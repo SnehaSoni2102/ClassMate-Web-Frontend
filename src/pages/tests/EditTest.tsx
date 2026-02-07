@@ -207,16 +207,6 @@ export default function EditTest() {
     e.preventDefault();
     if (!test) return;
     
-    // Validation: exam selection
-    if (!test.exam) {
-      toast({
-        title: "Exam required",
-        description: "Please select an exam for this test.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     // Validation: section time limits
     const sumSectionTimes = sections.reduce(
       (sum, s) => sum + Number(s.timeLimit || 0),
@@ -238,19 +228,21 @@ export default function EditTest() {
       });
       return;
     }
-    // Prepare API body
+    // Prepare API body (omit exam when empty to avoid backend validation error)
     const testBody: any = {
       ...test,
       totalQuestions,
       totalSections: sections.length,
       totalMarks,
-      exam: test.exam, // Ensure exam field is included
       durationInMinutes: test.durationInMinutes, // Convert back to milliseconds for API
       ...(test.type === "live"
         ? { endDate: test.endDate, endTime: test.endTime }
         : {}),
     };
     delete testBody._id;
+    if (test.exam) {
+      testBody.exam = test.exam;
+    }
     if (test.type === "mock") {
       delete testBody.endDate;
       delete testBody.endTime;
@@ -348,7 +340,6 @@ export default function EditTest() {
                     onChange={(e) =>
                       handleTestChange("title_hi", e.target.value)
                     }
-                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -370,7 +361,6 @@ export default function EditTest() {
                     onChange={(e) =>
                       handleTestChange("description_hi", e.target.value)
                     }
-                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -568,7 +558,6 @@ export default function EditTest() {
                           onChange={(e) =>
                             handleSectionChange(idx, "name_hi", e.target.value)
                           }
-                          required
                         />
                       </div>
                       <div className="space-y-2">

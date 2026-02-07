@@ -317,16 +317,6 @@ export default function EditGroupTest() {
     e.preventDefault();
     if (!test) return;
     
-    // Validation: exam selection
-    if (!test.exam) {
-      toast({
-        title: "Exam required",
-        description: "Please select an exam for this test.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     // Validation: section time limits
     const sumSectionTimes = sections.reduce(
       (sum, s) => sum + Number(s.timeLimit || 0),
@@ -350,14 +340,13 @@ export default function EditGroupTest() {
     }
 
     try {
-      // Prepare test data for API
+      // Prepare test data for API (omit exam when empty to avoid backend validation error)
       const testData: any = {
         ...test,
         testType: "paid", // Always ensure testType is paid
         totalQuestions,
         totalSections: sections.length,
         totalMarks,
-        exam: test.exam,
         durationInMinutes: test.durationInMinutes, // Convert to milliseconds
         // Format dates for API (convert to ISO string)
         startDate: test.startDate ? new Date(test.startDate).toISOString() : undefined,
@@ -370,6 +359,9 @@ export default function EditGroupTest() {
           questionIds: s.questionIds,
         })),
       };
+      if (test.exam) {
+        testData.exam = test.exam;
+      }
 
       // Remove live-specific fields for mock tests
       if (test.type === "mock") {
@@ -511,7 +503,6 @@ export default function EditGroupTest() {
                     onChange={(e) =>
                       handleTestChange("title_hi", e.target.value)
                     }
-                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -533,7 +524,6 @@ export default function EditGroupTest() {
                     onChange={(e) =>
                       handleTestChange("description_hi", e.target.value)
                     }
-                    required
                   />
                 </div>
 
@@ -758,7 +748,6 @@ export default function EditGroupTest() {
                           onChange={(e) =>
                             handleSectionChange(idx, "name_hi", e.target.value)
                           }
-                          required
                         />
                       </div>
                       <div className="space-y-2">

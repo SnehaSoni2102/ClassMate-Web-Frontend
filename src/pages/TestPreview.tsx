@@ -64,7 +64,7 @@ interface TestData {
   languageOptions: string[];
   type: string;
   status: string;
-  exam: Exam;
+  exam?: Exam;
   sections: Section[];
 }
 
@@ -207,7 +207,7 @@ const TestPreview = () => {
       // Exam info
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
-      const examInfo = `Exam: ${testData.exam.name} | Duration: ${formatDuration(testData.durationInMinutes)} | Total Marks: ${testData.totalMarks}`;
+      const examInfo = `Exam: ${testData.exam?.name ?? '—'} | Duration: ${formatDuration(testData.durationInMinutes)} | Total Marks: ${testData.totalMarks}`;
       currentY += addWrappedText(examInfo, margin, currentY, pageWidth - 2 * margin, 10) + 5;
 
       // Instructions
@@ -495,7 +495,7 @@ const TestPreview = () => {
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex items-start space-x-4">
-                  {testData.exam.logo && (
+                  {testData.exam?.logo && (
                     <img
                       src={testData.exam.logo}
                       alt="Exam Logo"
@@ -510,11 +510,15 @@ const TestPreview = () => {
                       {selectedLanguage === 'hi' ? testData.description_hi : testData.description}
                     </p>
                     <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
-                      <span className="flex items-center space-x-1">
-                        <BookOpen size={14} />
-                        <span>{testData.exam.name}</span>
-                      </span>
-                      <span>•</span>
+                      {testData.exam && (
+                        <>
+                          <span className="flex items-center space-x-1">
+                            <BookOpen size={14} />
+                            <span>{testData.exam.name}</span>
+                          </span>
+                          <span>•</span>
+                        </>
+                      )}
                       <span className="flex items-center space-x-1">
                         <FileText size={14} />
                         <span>{testData.type}</span>

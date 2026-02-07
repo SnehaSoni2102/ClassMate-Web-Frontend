@@ -272,16 +272,6 @@ export default function CreateGroupTest() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validation: exam selection
-    if (!test.exam) {
-      toast({
-        title: "Exam required",
-        description: "Please select an exam for this test.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     // Validation: section time limits
     const sumSectionTimes = sections.reduce(
       (sum, s) => sum + Number(s.timeLimit || 0),
@@ -305,13 +295,12 @@ export default function CreateGroupTest() {
     }
 
     try {
-      // Prepare test data for API
-      const testData = {
+      // Prepare test data for API (omit exam when empty to avoid backend validation error)
+      const testData: Record<string, unknown> = {
         ...test,
         totalQuestions,
         totalSections: sections.length,
         totalMarks,
-        exam: test.exam,
         durationInMinutes: test.durationInMinutes, // Convert to milliseconds
         sections: sections.map((s) => ({
           name: s.name,
@@ -321,6 +310,9 @@ export default function CreateGroupTest() {
           questionIds: s.questionIds,
         })),
       };
+      if (test.exam) {
+        testData.exam = test.exam;
+      }
 
       // Remove live-specific fields for mock tests
       if (test.type === "mock") {
@@ -435,7 +427,6 @@ export default function CreateGroupTest() {
                     onChange={(e) =>
                       handleTestChange("title_hi", e.target.value)
                     }
-                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -457,7 +448,6 @@ export default function CreateGroupTest() {
                     onChange={(e) =>
                       handleTestChange("description_hi", e.target.value)
                     }
-                    required
                   />
                 </div>
 
@@ -661,7 +651,6 @@ export default function CreateGroupTest() {
                           onChange={(e) =>
                             handleSectionChange(idx, "name_hi", e.target.value)
                           }
-                          required
                         />
                       </div>
                       <div className="space-y-2">

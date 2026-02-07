@@ -76,7 +76,6 @@ export default function SectionForm({
                   <Input
                     value={section.name_hi}
                     onChange={(e) => onSectionChange(idx, "name_hi", e.target.value)}
-                    required
                   />
                 </div>
                 <div className="space-y-2">

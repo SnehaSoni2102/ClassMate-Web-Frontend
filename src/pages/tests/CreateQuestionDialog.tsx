@@ -164,26 +164,13 @@ export default function CreateQuestionDialog({
     }
   };
 
-  // Comprehensive validation for form submission
+  // Comprehensive validation for form submission (English required; Hindi optional)
   const isFormValidForSubmission = () => {
-    // Check if question texts are filled in both languages
-    const hasQuestionTexts = textEN.trim() && textHI.trim();
-
-    // Check if all 4 options are filled in both languages
+    const hasQuestionText = textEN.trim();
     const hasAllEnglishOptions = options.every(opt => opt.en.trim());
-    const hasAllHindiOptions = options.every(opt => opt.hi.trim());
-
-    // Solutions are optional - no longer required
-    // const hasSolutions = solutionEN.trim() && solutionHI.trim();
-
-    // Check if answers are selected in both languages
     const hasEnglishAnswers = options.some(opt => opt.isCorrectEN);
-    const hasHindiAnswers = options.some(opt => opt.isCorrectHI);
-
-    // Check if question type is selected
     const hasQuestionType = questionType === "single_choice" || questionType === "multiple_choice";
 
-    // Validate answer count for single choice
     if (questionType === "single_choice") {
       const englishCorrectCount = options.filter(o => o.isCorrectEN).length;
       const hindiCorrectCount = options.filter(o => o.isCorrectHI).length;
@@ -192,12 +179,7 @@ export default function CreateQuestionDialog({
       }
     }
 
-    return hasQuestionTexts &&
-           hasAllEnglishOptions &&
-           hasAllHindiOptions &&
-           hasEnglishAnswers &&
-           hasHindiAnswers &&
-           hasQuestionType;
+    return hasQuestionText && hasAllEnglishOptions && hasEnglishAnswers && hasQuestionType;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -222,34 +204,19 @@ export default function CreateQuestionDialog({
     //   return;
     // }
     
-    if (lang === "en") {
-      if (!textEN.trim() || options.some((o) => !o.en.trim())) {
-        setError("Please fill all English fields.");
-        return;
-      }
-      const correctCount = options.filter((o) => o.isCorrectEN).length;
-      if (correctCount === 0) {
-        setError("Select at least one correct answer (English). ");
-        return;
-      }
-      if (questionType === "single_choice" && correctCount > 1) {
-        setError("Only one correct answer allowed for single choice.");
-        return;
-      }
-    } else {
-      if (!textHI.trim() || options.some((o) => !o.hi.trim())) {
-        setError("Please fill all Hindi fields.");
-        return;
-      }
-      const correctCount = options.filter((o) => o.isCorrectHI).length;
-      if (correctCount === 0) {
-        setError("Select at least one correct answer (Hindi). ");
-        return;
-      }
-      if (questionType === "single_choice" && correctCount > 1) {
-        setError("Only one correct answer allowed for single choice.");
-        return;
-      }
+    // English is required; Hindi is optional
+    if (!textEN.trim() || options.some((o) => !o.en.trim())) {
+      setError("Please fill all English fields.");
+      return;
+    }
+    const correctCount = options.filter((o) => o.isCorrectEN).length;
+    if (correctCount === 0) {
+      setError("Select at least one correct answer (English).");
+      return;
+    }
+    if (questionType === "single_choice" && correctCount > 1) {
+      setError("Only one correct answer allowed for single choice.");
+      return;
     }
     // Upload image if exists
     let imageUrl = "";
@@ -494,7 +461,6 @@ export default function CreateQuestionDialog({
                 <Textarea
                   value={textHI}
                   onChange={(e) => setTextHI(e.target.value)}
-                  required
                   className="text-xs min-h-[48px]"
                 />
               </div>
@@ -541,7 +507,7 @@ export default function CreateQuestionDialog({
                     onChange={(e) =>
                       handleOptionChange(i, lang, e.target.value)
                     }
-                    required
+                    required={lang === "en"}
                     className="w-40 px-2 py-1"
                   />
                   <div className="flex items-center gap-1">
