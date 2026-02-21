@@ -963,6 +963,11 @@ const GroupDetail = () => {
                               <span>•</span>
                               <span>{Number(test?.durationInMinutes/60)} mins</span>
                             </div>
+                            {test.deletionAt && (
+                              <p className="text-xs text-amber-600 mt-1">
+                                Expires at {new Date(test.deletionAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center space-x-3">

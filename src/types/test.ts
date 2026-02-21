@@ -51,6 +51,8 @@ export interface GroupTestListItem {
   isAllIndia?: boolean;
   createdAt: string;
   updatedAt: string;
+  /** When the test is scheduled for deletion/expiry (ISO date string) */
+  deletionAt?: string;
 }
 
 export interface Test {
