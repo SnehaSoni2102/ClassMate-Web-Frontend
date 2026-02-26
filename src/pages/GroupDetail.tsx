@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { GroupService } from "@/services/group.service";
 import { GroupApiResponse, GroupSearchMember } from "@/types/group";
 import { GroupTestListItem } from "@/types/test";
+import { GroupQuizListItem } from "@/types/quiz";
 import LoadingSpinner from "@/components/ui/loading-spinner";
 import {
   AlertCircle,
@@ -49,6 +50,7 @@ const GroupDetail = () => {
   const [groupData, setGroupData] = useState<GroupApiResponse | null>(null);
   const [members, setMembers] = useState<GroupSearchMember[]>([]);
   const [tests, setTests] = useState<GroupTestListItem[]>([]);
+  const [quizzes, setQuizzes] = useState<GroupQuizListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -75,7 +77,7 @@ const GroupDetail = () => {
   // Handle initial tab from URL params
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam && !['overview', 'members', 'tests'].includes(tabParam)) {
+    if (tabParam && !['overview', 'members', 'tests', 'quizzes'].includes(tabParam)) {
       // Invalid tab, redirect to overview
       const newSearchParams = new URLSearchParams(searchParams);
       newSearchParams.set('tab', 'overview');
@@ -116,6 +118,16 @@ const GroupDetail = () => {
             setTests([]);
           }
           // Don't set a global error for test fetch failures
+        }
+
+        // Fetch active quizzes for the group (same 403 handling as tests)
+        try {
+          const quizzesResponse = await GroupService.getGroupQuizzes(id);
+          setQuizzes(quizzesResponse);
+        } catch (quizError: any) {
+          if (quizError?.response?.status === 403 || quizError?.status === 403) {
+            setQuizzes([]);
+          }
         }
       } catch (error: any) {
         setError(error.message || "Failed to load group details");
@@ -477,7 +489,7 @@ const GroupDetail = () => {
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
@@ -497,6 +509,18 @@ const GroupDetail = () => {
                 <div>
                   <p className="text-2xl font-bold">{tests.length}</p>
                   <p className="text-sm text-gray-600">Tests</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-2">
+                <BookOpen className="text-brand-primary" size={20} />
+                <div>
+                  <p className="text-2xl font-bold">{quizzes.length}</p>
+                  <p className="text-sm text-gray-600">Quizzes</p>
                 </div>
               </div>
             </CardContent>
@@ -533,10 +557,11 @@ const GroupDetail = () => {
           onValueChange={handleTabChange}
           className="space-y-6"
         >
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="members">Members</TabsTrigger>
             <TabsTrigger value="tests">Tests</TabsTrigger>
+            <TabsTrigger value="quizzes">Quizzes</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -982,6 +1007,86 @@ const GroupDetail = () => {
                             </Link>
                           )}
                           <Link to={`/groups/${id}/test-preview/${test._id}`}>
+                            <Button variant="outline" size="sm">
+                              View Details
+                            </Button>
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="quizzes" className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-row justify-between">
+                <CardTitle className="inline w-fit">
+                  Quizzes {userRole === "member" ? "" : `(${quizzes.length})`}
+                </CardTitle>
+                {userRole === "group-admin" && (
+                  <Link to={`/groups/${id}/create-quiz`} className="inline w-fit">
+                    <Button className="button-gradient text-white">
+                      Create Quiz
+                    </Button>
+                  </Link>
+                )}
+              </CardHeader>
+              <CardContent>
+                {quizzes.length === 0 ? (
+                  <div className="text-center py-8">
+                    <BookOpen
+                      className="mx-auto text-gray-400 mb-4"
+                      size={48}
+                    />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      No quizzes yet
+                    </h3>
+                    <p className="text-gray-600 mb-4">
+                      Active quizzes for this group will appear here.
+                    </p>
+                    {userRole === "group-admin" && (
+                      <Link to={`/groups/${id}/create-quiz`}>
+                        <Button className="button-gradient text-white">
+                          Create Quiz
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {quizzes.map((quiz) => (
+                      <div
+                        key={quiz._id}
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center space-x-3">
+                          {getTestStatusIcon(quiz.status)}
+                          <div>
+                            <h4 className="font-medium text-gray-900">
+                              {quiz.title}
+                            </h4>
+                            <p className="text-sm text-gray-600">
+                              {quiz.description}
+                            </p>
+                            <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
+                              <span>{quiz.totalQuestions} questions</span>
+                              <span>•</span>
+                              <span>{Number(quiz.durationInMinutes / 60)} mins</span>
+                            </div>
+                            {quiz.deletionAt && (
+                              <p className="text-xs text-amber-600 mt-1">
+                                Expires at {new Date(quiz.deletionAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          {getTestTypeBadge(quiz?.testType)}
+                          {getTestStatusBadge(quiz.status)}
+                          <Link to={`/groups/${id}/quiz/${quiz._id}`}>
                             <Button variant="outline" size="sm">
                               View Details
                             </Button>

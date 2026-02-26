@@ -13,6 +13,7 @@ import {
   GroupSearchMember,
 } from '@/types/group';
 import { GroupTestListItem } from '@/types/test';
+import { GroupQuizListItem, CreateGroupQuizPayload } from '@/types/quiz';
 import { ApiResponse, API_ENDPOINTS, PaginatedResponse } from '@/types/api';
 
 export class GroupService {
@@ -430,6 +431,51 @@ export class GroupService {
       throw new Error(response.message || 'Failed to get group tests');
     } catch (error: any) {
       console.error('Get group tests error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get active quizzes for a group (GET /quiz/group/:groupId/active)
+   */
+  static async getGroupQuizzes(groupId: string): Promise<GroupQuizListItem[]> {
+    try {
+      const response = await apiClient.get<GroupQuizListItem[]>(
+        API_ENDPOINTS.QUIZ.GROUP_ACTIVE(groupId)
+      );
+
+      if (response.success) {
+        const data = response.data;
+        return Array.isArray(data) ? data : [];
+      }
+
+      throw new Error(response.message || 'Failed to get group quizzes');
+    } catch (error: any) {
+      console.error('Get group quizzes error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a quiz for a group (POST /quiz/create/group/:groupId). Only group admin can create.
+   */
+  static async createGroupQuiz(
+    groupId: string,
+    payload: CreateGroupQuizPayload
+  ): Promise<{ _id: string }> {
+    try {
+      const response = await apiClient.post<{ _id: string }>(
+        API_ENDPOINTS.QUIZ.CREATE_GROUP(groupId),
+        payload
+      );
+
+      if (response.success && response.data) {
+        return response.data;
+      }
+
+      throw new Error(response.message || 'Failed to create group quiz');
+    } catch (error: any) {
+      console.error('Create group quiz error:', error);
       throw error;
     }
   }

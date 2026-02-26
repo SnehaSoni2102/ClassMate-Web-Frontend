@@ -126,5 +126,9 @@ export const API_ENDPOINTS = {
     UPDATE: (groupId: string, testId: string) => `/group/${groupId}/edit-test/${testId}`,
     DELETE: (groupId: string, testId: string) => `/group/${groupId}/test/${testId}`,
     LIST: (groupId: string) => `/group/fetch-test/${groupId}`
+  },
+  QUIZ: {
+    GROUP_ACTIVE: (groupId: string) => `/quiz/group/${groupId}/active`,
+    CREATE_GROUP: (groupId: string) => `/quiz/create/group/${groupId}`
   }
 } as const;
