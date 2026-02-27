@@ -23,6 +23,7 @@ import FindGlobalTests from "./pages/FindGlobalTests";
 import GlobalTestDetail from "./pages/GlobalTestDetail";
 import CreateGroupTest from "./pages/groups/CreateGroupTest";
 import CreateGroupQuiz from "./pages/groups/CreateGroupQuiz";
+import QuizPreview from "./pages/QuizPreview";
 import EditGroupTest from "./pages/groups/EditGroupTest";
 import Tests from "./pages/Tests";
 import EditTest from "./pages/tests/EditTest";
@@ -161,6 +162,19 @@ const router = createBrowserRouter([
         <Layout>
           <ProtectedRoute>
             <TestPreview />
+          </ProtectedRoute>
+        </Layout>
+        <ScrollRestoration />
+      </>
+    ),
+  },
+  {
+    path: "/groups/:groupId/quiz/:quizId",
+    element: (
+      <>
+        <Layout>
+          <ProtectedRoute>
+            <QuizPreview />
           </ProtectedRoute>
         </Layout>
         <ScrollRestoration />
