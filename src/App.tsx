@@ -25,6 +25,7 @@ import CreateGroupTest from "./pages/groups/CreateGroupTest";
 import CreateGroupQuiz from "./pages/groups/CreateGroupQuiz";
 import QuizPreview from "./pages/QuizPreview";
 import EditGroupTest from "./pages/groups/EditGroupTest";
+import EditGroupQuiz from "./pages/groups/EditGroupQuiz";
 import Tests from "./pages/Tests";
 import EditTest from "./pages/tests/EditTest";
 import Terms from "./pages/Terms";
@@ -227,6 +228,19 @@ const router = createBrowserRouter([
         <Layout>
           <ProtectedRoute>
             <CreateGroupQuiz />
+          </ProtectedRoute>
+        </Layout>
+        <ScrollRestoration />
+      </>
+    ),
+  },
+  {
+    path: "/groups/:groupId/edit-quiz/:quizId",
+    element: (
+      <>
+        <Layout>
+          <ProtectedRoute>
+            <EditGroupQuiz />
           </ProtectedRoute>
         </Layout>
         <ScrollRestoration />

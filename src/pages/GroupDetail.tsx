@@ -1086,6 +1086,13 @@ const GroupDetail = () => {
                         <div className="flex items-center space-x-3">
                           {getTestTypeBadge(quiz?.testType)}
                           {getTestStatusBadge(quiz.status)}
+                          {userRole === "group-admin" && (
+                            <Link to={`/groups/${id}/edit-quiz/${quiz._id}`}>
+                              <Button variant="outline" size="sm">
+                                Edit Quiz
+                              </Button>
+                            </Link>
+                          )}
                           <Link to={`/groups/${id}/quiz/${quiz._id}`}>
                             <Button variant="outline" size="sm">
                               View Details
