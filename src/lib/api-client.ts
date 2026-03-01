@@ -1,5 +1,11 @@
-import { ApiResponse, AppError, ErrorType, ApiRequestConfig, STORAGE_KEYS } from '@/types/api';
-import { safeSessionStorage } from '@/lib/utils';
+import {
+  ApiResponse,
+  AppError,
+  ErrorType,
+  ApiRequestConfig,
+  STORAGE_KEYS,
+} from "@/types/api";
+import { safeSessionStorage } from "@/lib/utils";
 
 class ApiClient {
   private baseURL: string;
@@ -39,13 +45,18 @@ class ApiClient {
     return null;
   }
 
-  private createError(type: ErrorType, message: string, statusCode?: number, details?: any): AppError {
+  private createError(
+    type: ErrorType,
+    message: string,
+    statusCode?: number,
+    details?: any,
+  ): AppError {
     return {
       type,
       message,
       statusCode,
       details,
-      code: `${type}_${statusCode || 'UNKNOWN'}`
+      code: `${type}_${statusCode || "UNKNOWN"}`,
     };
   }
 
@@ -54,9 +65,9 @@ class ApiClient {
     if (!error.response) {
       return this.createError(
         ErrorType.NETWORK_ERROR,
-        'Network error. Please check your internet connection.',
+        "Network error. Please check your internet connection.",
         0,
-        error
+        error,
       );
     }
 
@@ -68,41 +79,41 @@ class ApiClient {
         this.clearAuthTokens();
         return this.createError(
           ErrorType.AUTH_ERROR,
-          data?.message || 'Authentication failed. Please login again.',
+          data?.message || "Authentication failed. Please login again.",
           status,
-          data
+          data,
         );
 
       case 403:
         return this.createError(
           ErrorType.PERMISSION_ERROR,
-          data?.message || 'You do not have permission to perform this action.',
+          data?.message || "You do not have permission to perform this action.",
           status,
-          data
+          data,
         );
 
       case 404:
         return this.createError(
           ErrorType.NOT_FOUND_ERROR,
-          data?.message || 'The requested resource was not found.',
+          data?.message || "The requested resource was not found.",
           status,
-          data
+          data,
         );
 
       case 422:
         return this.createError(
           ErrorType.VALIDATION_ERROR,
-          data?.message || 'Validation failed.',
+          data?.message || "Validation failed.",
           status,
-          data
+          data,
         );
 
       case 429:
         return this.createError(
           ErrorType.RATE_LIMIT_ERROR,
-          data?.message || 'Too many requests. Please try again later.',
+          data?.message || "Too many requests. Please try again later.",
           status,
-          data
+          data,
         );
 
       case 500:
@@ -111,31 +122,41 @@ class ApiClient {
       case 504:
         return this.createError(
           ErrorType.SERVER_ERROR,
-          data?.message || 'Server error. Please try again later.',
+          data?.message || "Server error. Please try again later.",
           status,
-          data
+          data,
         );
 
       default:
         return this.createError(
           ErrorType.SERVER_ERROR,
-          data?.message || 'An unexpected error occurred.',
+          data?.message || "An unexpected error occurred.",
           status,
-          data
+          data,
         );
     }
   }
 
-  private async makeRequest<T>(config: ApiRequestConfig, retryCount = 0): Promise<ApiResponse<T>> {
-    const { method, url, data, params, headers = {}, timeout = this.timeout } = config;
+  private async makeRequest<T>(
+    config: ApiRequestConfig,
+    retryCount = 0,
+  ): Promise<ApiResponse<T>> {
+    const {
+      method,
+      url,
+      data,
+      params,
+      headers = {},
+      timeout = this.timeout,
+    } = config;
 
     // Add auth token if available, fallback to temp token for OTP verification
     const token = this.getAuthToken();
     const tempToken = this.getTempToken();
-    
+
     if (token) {
       headers.Authorization = `Bearer ${token}`;
-    } else if (tempToken && url.includes('/verify-otp')) {
+    } else if (tempToken && url.includes("/verify-otp")) {
       headers.Authorization = `Bearer ${tempToken}`;
     }
 
@@ -144,11 +165,11 @@ class ApiClient {
     if (data) {
       if (data instanceof FormData) {
         // Don't set Content-Type for FormData, let the browser set it with boundary
-        delete headers['Content-Type'];
+        delete headers["Content-Type"];
         body = data;
       } else {
         // Set Content-Type for JSON data
-        headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+        headers["Content-Type"] = headers["Content-Type"] || "application/json";
         body = JSON.stringify(data);
       }
     }
@@ -160,7 +181,7 @@ class ApiClient {
       // Build URL with params
       const fullUrl = new URL(url, this.baseURL);
       if (params) {
-        Object.keys(params).forEach(key => {
+        Object.keys(params).forEach((key) => {
           if (params[key] !== undefined && params[key] !== null) {
             fullUrl.searchParams.append(key, String(params[key]));
           }
@@ -171,7 +192,7 @@ class ApiClient {
         method,
         headers,
         body,
-        signal: controller.signal
+        signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
@@ -195,16 +216,16 @@ class ApiClient {
 
       // Empty body with success (e.g. 204 No Content) - return valid ApiResponse
       if (responseData === null && response.ok) {
-        return { success: true, data: null as any, message: 'Success' };
+        return { success: true, data: null as any, message: "Success" };
       }
 
       // Normalize response format - if the API doesn't return success field, assume success
-      if (typeof responseData === 'object' && responseData !== null) {
-        if (!('success' in responseData)) {
+      if (typeof responseData === "object" && responseData !== null) {
+        if (!("success" in responseData)) {
           return {
             success: true,
             data: responseData,
-            message: 'Success'
+            message: "Success",
           };
         }
       }
@@ -212,8 +233,10 @@ class ApiClient {
       return responseData;
     } catch (error: any) {
       // Retry logic for network errors
-      if (retryCount < this.maxRetries && error.name === 'AbortError') {
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+      if (retryCount < this.maxRetries && error.name === "AbortError") {
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.pow(2, retryCount) * 1000),
+        );
         return this.makeRequest(config, retryCount + 1);
       }
 
@@ -221,24 +244,27 @@ class ApiClient {
     }
   }
 
-  async get<T>(url: string, params?: Record<string, any>): Promise<ApiResponse<T>> {
-    return this.makeRequest<T>({ method: 'GET', url, params });
+  async get<T>(
+    url: string,
+    params?: Record<string, any>,
+  ): Promise<ApiResponse<T>> {
+    return this.makeRequest<T>({ method: "GET", url, params });
   }
 
   async post<T>(url: string, data?: any): Promise<ApiResponse<T>> {
-    return this.makeRequest<T>({ method: 'POST', url, data });
+    return this.makeRequest<T>({ method: "POST", url, data });
   }
 
   async put<T>(url: string, data?: any): Promise<ApiResponse<T>> {
-    return this.makeRequest<T>({ method: 'PUT', url, data });
+    return this.makeRequest<T>({ method: "PUT", url, data });
   }
 
   async patch<T>(url: string, data?: any): Promise<ApiResponse<T>> {
-    return this.makeRequest<T>({ method: 'PATCH', url, data });
+    return this.makeRequest<T>({ method: "PATCH", url, data });
   }
 
   async delete<T>(url: string): Promise<ApiResponse<T>> {
-    return this.makeRequest<T>({ method: 'DELETE', url });
+    return this.makeRequest<T>({ method: "DELETE", url });
   }
 
   // Public utility methods
@@ -270,9 +296,9 @@ class ApiClient {
 
 // Create singleton instance
 const apiClient = new ApiClient(
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:9000/api',
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:9000/api",
   10000,
-  3
+  3,
 );
 
 export default apiClient;
