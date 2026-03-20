@@ -457,6 +457,48 @@ export class GroupService {
   }
 
   /**
+   * Get upcoming quizzes for a group (GET /quiz/group/:groupId/upcomming)
+   */
+  static async getGroupUpcomingQuizzes(groupId: string): Promise<GroupQuizListItem[]> {
+    try {
+      const response = await apiClient.get<GroupQuizListItem[]>(
+        API_ENDPOINTS.QUIZ.GROUP_UPCOMMING(groupId)
+      );
+
+      if (response.success) {
+        const data = response.data;
+        return Array.isArray(data) ? data : [];
+      }
+
+      throw new Error(response.message || 'Failed to get upcoming quizzes');
+    } catch (error: any) {
+      console.error('Get group upcoming quizzes error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get completed quizzes for a group (GET /quiz/group/:groupId/completed)
+   */
+  static async getGroupCompletedQuizzes(groupId: string): Promise<GroupQuizListItem[]> {
+    try {
+      const response = await apiClient.get<GroupQuizListItem[]>(
+        API_ENDPOINTS.QUIZ.GROUP_COMPLETED(groupId)
+      );
+
+      if (response.success) {
+        const data = response.data;
+        return Array.isArray(data) ? data : [];
+      }
+
+      throw new Error(response.message || 'Failed to get completed quizzes');
+    } catch (error: any) {
+      console.error('Get group completed quizzes error:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Create a quiz for a group (POST /quiz/create/group/:groupId). Only group admin can create.
    */
   static async createGroupQuiz(

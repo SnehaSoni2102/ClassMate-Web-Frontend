@@ -50,7 +50,9 @@ const GroupDetail = () => {
   const [groupData, setGroupData] = useState<GroupApiResponse | null>(null);
   const [members, setMembers] = useState<GroupSearchMember[]>([]);
   const [tests, setTests] = useState<GroupTestListItem[]>([]);
-  const [quizzes, setQuizzes] = useState<GroupQuizListItem[]>([]);
+  const [activeQuizzes, setActiveQuizzes] = useState<GroupQuizListItem[]>([]);
+  const [upcomingQuizzes, setUpcomingQuizzes] = useState<GroupQuizListItem[]>([]);
+  const [completedQuizzes, setCompletedQuizzes] = useState<GroupQuizListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -123,10 +125,30 @@ const GroupDetail = () => {
         // Fetch active quizzes for the group (same 403 handling as tests)
         try {
           const quizzesResponse = await GroupService.getGroupQuizzes(id);
-          setQuizzes(quizzesResponse);
+          setActiveQuizzes(quizzesResponse);
         } catch (quizError: any) {
           if (quizError?.response?.status === 403 || quizError?.status === 403) {
-            setQuizzes([]);
+            setActiveQuizzes([]);
+          }
+        }
+
+        // Fetch upcoming quizzes for the group (same 403 handling as tests)
+        try {
+          const upcomingResponse = await GroupService.getGroupUpcomingQuizzes(id);
+          setUpcomingQuizzes(upcomingResponse);
+        } catch (upcomingError: any) {
+          if (upcomingError?.response?.status === 403 || upcomingError?.status === 403) {
+            setUpcomingQuizzes([]);
+          }
+        }
+
+        // Fetch completed quizzes for the group (same 403 handling as tests)
+        try {
+          const completedResponse = await GroupService.getGroupCompletedQuizzes(id);
+          setCompletedQuizzes(completedResponse);
+        } catch (completedError: any) {
+          if (completedError?.response?.status === 403 || completedError?.status === 403) {
+            setCompletedQuizzes([]);
           }
         }
       } catch (error: any) {
@@ -365,6 +387,9 @@ const GroupDetail = () => {
     switch (status) {
       case "active":
         return <Play className="text-green-500" size={16} />;
+      case "upcomming":
+      case "upcoming":
+        return <Clock className="text-yellow-500" size={16} />;
       case "completed":
       case "published":
         return <CheckCircle className="text-blue-500" size={16} />;
@@ -383,6 +408,9 @@ const GroupDetail = () => {
     switch (status) {
       case "active":
         return <Badge className="bg-green-100 text-green-800">Active</Badge>;
+      case "upcomming":
+      case "upcoming":
+        return <Badge className="bg-yellow-100 text-yellow-800">Upcoming</Badge>;
       case "completed":
         return <Badge className="bg-blue-100 text-blue-800">Completed</Badge>;
       case "published":
@@ -444,6 +472,58 @@ const GroupDetail = () => {
   const invitedCount = groupData?.invitedUsers.length || 0;
   const joinRequestsCount = groupData?.joinRequests.length || 0;
   const isStudentGroup = groupData?.createdBy === "STUDENT";
+
+  const renderQuizRows = (quizList: GroupQuizListItem[]) => (
+    <div className="space-y-4">
+      {quizList.map((quiz) => (
+        <div
+          key={quiz._id}
+          className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <div className="flex items-center space-x-3">
+            {getTestStatusIcon(quiz.status)}
+            <div>
+              <h4 className="font-medium text-gray-900">{quiz.title}</h4>
+              <p className="text-sm text-gray-600">{quiz.description}</p>
+              <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
+                <span>{quiz.totalQuestions} questions</span>
+                <span>•</span>
+                <span>{Number(quiz.durationInMinutes / 60)} mins</span>
+              </div>
+              {quiz.deletionAt && (
+                <p className="text-xs text-amber-600 mt-1">
+                  Expires at{" "}
+                  {new Date(quiz.deletionAt).toLocaleDateString(undefined, {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center space-x-3">
+            {getTestTypeBadge(quiz?.testType)}
+            {getTestStatusBadge(quiz.status)}
+            {userRole === "group-admin" && (
+              <Link to={`/groups/${id}/edit-quiz/${quiz._id}`}>
+                <Button variant="outline" size="sm">
+                  Edit Quiz
+                </Button>
+              </Link>
+            )}
+            <Link to={`/groups/${id}/quiz/${quiz._id}`}>
+              <Button variant="outline" size="sm">
+                View Details
+              </Button>
+            </Link>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -519,7 +599,7 @@ const GroupDetail = () => {
               <div className="flex items-center space-x-2">
                 <BookOpen className="text-brand-primary" size={20} />
                 <div>
-                  <p className="text-2xl font-bold">{quizzes.length}</p>
+                  <p className="text-2xl font-bold">{activeQuizzes.length}</p>
                   <p className="text-sm text-gray-600">Quizzes</p>
                 </div>
               </div>
@@ -1024,7 +1104,7 @@ const GroupDetail = () => {
             <Card>
               <CardHeader className="flex flex-row justify-between">
                 <CardTitle className="inline w-fit">
-                  Quizzes {userRole === "member" ? "" : `(${quizzes.length})`}
+                  Quizzes {userRole === "member" ? "" : `(${activeQuizzes.length})`}
                 </CardTitle>
                 {userRole === "group-admin" && (
                   <Link to={`/groups/${id}/create-quiz`} className="inline w-fit">
@@ -1035,74 +1115,80 @@ const GroupDetail = () => {
                 )}
               </CardHeader>
               <CardContent>
-                {quizzes.length === 0 ? (
-                  <div className="text-center py-8">
-                    <BookOpen
-                      className="mx-auto text-gray-400 mb-4"
-                      size={48}
-                    />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      No quizzes yet
+                <div className="space-y-10">
+                  <section className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      active
                     </h3>
-                    <p className="text-gray-600 mb-4">
-                      Active quizzes for this group will appear here.
-                    </p>
-                    {userRole === "group-admin" && (
-                      <Link to={`/groups/${id}/create-quiz`}>
-                        <Button className="button-gradient text-white">
-                          Create Quiz
-                        </Button>
-                      </Link>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {quizzes.map((quiz) => (
-                      <div
-                        key={quiz._id}
-                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-                      >
-                        <div className="flex items-center space-x-3">
-                          {getTestStatusIcon(quiz.status)}
-                          <div>
-                            <h4 className="font-medium text-gray-900">
-                              {quiz.title}
-                            </h4>
-                            <p className="text-sm text-gray-600">
-                              {quiz.description}
-                            </p>
-                            <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
-                              <span>{quiz.totalQuestions} questions</span>
-                              <span>•</span>
-                              <span>{Number(quiz.durationInMinutes / 60)} mins</span>
-                            </div>
-                            {quiz.deletionAt && (
-                              <p className="text-xs text-amber-600 mt-1">
-                                Expires at {new Date(quiz.deletionAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          {getTestTypeBadge(quiz?.testType)}
-                          {getTestStatusBadge(quiz.status)}
-                          {userRole === "group-admin" && (
-                            <Link to={`/groups/${id}/edit-quiz/${quiz._id}`}>
-                              <Button variant="outline" size="sm">
-                                Edit Quiz
-                              </Button>
-                            </Link>
-                          )}
-                          <Link to={`/groups/${id}/quiz/${quiz._id}`}>
-                            <Button variant="outline" size="sm">
-                              View Details
+                    {activeQuizzes.length === 0 ? (
+                      <div className="text-center py-8">
+                        <BookOpen
+                          className="mx-auto text-gray-400 mb-4"
+                          size={48}
+                        />
+                        <h4 className="text-lg font-medium text-gray-900 mb-2">
+                          No active quizzes yet
+                        </h4>
+                        <p className="text-gray-600 mb-4">
+                          Active quizzes for this group will appear here.
+                        </p>
+                        {userRole === "group-admin" && (
+                          <Link to={`/groups/${id}/create-quiz`}>
+                            <Button className="button-gradient text-white">
+                              Create Quiz
                             </Button>
                           </Link>
-                        </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                )}
+                    ) : (
+                      renderQuizRows(activeQuizzes)
+                    )}
+                  </section>
+
+                  <section className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      upcoming
+                    </h3>
+                    {upcomingQuizzes.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Clock
+                          className="mx-auto text-gray-400 mb-4"
+                          size={48}
+                        />
+                        <h4 className="text-lg font-medium text-gray-900 mb-2">
+                          No upcoming quizzes yet
+                        </h4>
+                        <p className="text-gray-600 mb-4">
+                          Upcoming quizzes for this group will appear here.
+                        </p>
+                      </div>
+                    ) : (
+                      renderQuizRows(upcomingQuizzes)
+                    )}
+                  </section>
+
+                  <section className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      completed
+                    </h3>
+                    {completedQuizzes.length === 0 ? (
+                      <div className="text-center py-8">
+                        <CheckCircle
+                          className="mx-auto text-gray-400 mb-4"
+                          size={48}
+                        />
+                        <h4 className="text-lg font-medium text-gray-900 mb-2">
+                          No completed quizzes yet
+                        </h4>
+                        <p className="text-gray-600 mb-4">
+                          Completed quizzes for this group will appear here.
+                        </p>
+                      </div>
+                    ) : (
+                      renderQuizRows(completedQuizzes)
+                    )}
+                  </section>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

@@ -129,6 +129,8 @@ export const API_ENDPOINTS = {
   },
   QUIZ: {
     GROUP_ACTIVE: (groupId: string) => `/quiz/group/${groupId}/active`,
+    GROUP_UPCOMMING: (groupId: string) => `/quiz/group/${groupId}/upcomming`,
+    GROUP_COMPLETED: (groupId: string) => `/quiz/group/${groupId}/completed`,
     CREATE_GROUP: (groupId: string) => `/quiz/create/group/${groupId}`
   }
 } as const;
