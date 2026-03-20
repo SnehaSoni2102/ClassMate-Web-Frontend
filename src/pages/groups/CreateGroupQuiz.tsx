@@ -45,8 +45,6 @@ export default function CreateGroupQuiz() {
     title_hi: "",
     description: "",
     description_hi: "",
-    totalQuestions: 0,
-    durationInMinutes: 30,
     exam: "",
     languageOptions: LANGUAGE_OPTIONS as string[],
     startDate: "",
@@ -54,9 +52,15 @@ export default function CreateGroupQuiz() {
     endDate: "",
     endTime: "",
   });
+  // When true, backend may ignore start/end scheduling fields.
+  const [scheduleNow, setScheduleNow] = useState(false);
 
   const [questionIds, setQuestionIds] = useState<string[]>([]);
   const [questionObjs, setQuestionObjs] = useState<any[]>([]);
+  // Per-question time in minutes (used to derive total duration).
+  const [questionTimeById, setQuestionTimeById] = useState<Record<string, number>>(
+    {}
+  );
   const [questionsDialogOpen, setQuestionsDialogOpen] = useState(false);
   const [questionLang, setQuestionLang] = useState<"en" | "hi">("en");
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
@@ -107,18 +111,33 @@ export default function CreateGroupQuiz() {
 
   const handleSaveQuestions = (selected: any[]) => {
     setQuestionObjs(selected);
-    setQuestionIds(selected.map((q) => q._id));
+    const selectedIds = selected.map((q) => q._id);
+    setQuestionIds(selectedIds);
+    // Preserve existing per-question times where possible; otherwise default to 1 minute.
+    setQuestionTimeById((prev) => {
+      const next: Record<string, number> = {};
+      selectedIds.forEach((id) => {
+        next[id] = prev[id] ?? 1;
+      });
+      return next;
+    });
     setQuestionsDialogOpen(false);
   };
 
   const handleAddCreatedQuestion = (q: any) => {
     setQuestionObjs((prev) => [...prev, q]);
     setQuestionIds((prev) => [...prev, q._id]);
+    setQuestionTimeById((prev) => ({ ...prev, [q._id]: prev[q._id] ?? 1 }));
   };
 
   const handleRemoveQuestion = (questionId: string) => {
     setQuestionObjs((prev) => prev.filter((q) => q._id !== questionId));
     setQuestionIds((prev) => prev.filter((id) => id !== questionId));
+    setQuestionTimeById((prev) => {
+      const next = { ...prev };
+      delete next[questionId];
+      return next;
+    });
   };
 
   const handleReportQuestion = (questionId: string, questionText: string) => {
@@ -127,6 +146,10 @@ export default function CreateGroupQuiz() {
   };
 
   const totalQuestions = questionIds.length;
+  const durationInMinutes = questionIds.reduce((sum, id) => {
+    const t = questionTimeById[id] ?? 1;
+    return sum + (Number.isFinite(t) ? t : 1);
+  }, 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,22 +162,37 @@ export default function CreateGroupQuiz() {
       });
       return;
     }
+    if (durationInMinutes <= 0) {
+      toast({
+        title: "Invalid duration",
+        description: "Please enter a valid time (in minutes) for each question.",
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       const payload = {
         title: quiz.title,
         description: quiz.description,
         title_hi: quiz.title_hi || undefined,
         description_hi: quiz.description_hi || undefined,
+        scheaduleNow: scheduleNow,
         totalQuestions,
-        durationInMinutes: quiz.durationInMinutes,
+        durationInMinutes,
         languageOptions: quiz.languageOptions,
         startDate: quiz.startDate,
         startTime: quiz.startTime,
         endDate: quiz.endDate,
         endTime: quiz.endTime,
-        questions: questionIds,
+        // New API contract expects per-question time
+        questions: questionIds.map((questionId) => ({
+          questionId,
+          timeInMinutes: questionTimeById[questionId] ?? 1,
+        })),
       } as any;
       if (quiz.exam) payload.exam = quiz.exam;
+      // The backend endpoint was updated; include groupId for safety.
+      payload.groupId = groupId;
 
       const created = await GroupService.createGroupQuiz(groupId, payload);
       toast({
@@ -306,6 +344,21 @@ export default function CreateGroupQuiz() {
                     />
                   </div>
                   <div className="space-y-2">
+                    <Label htmlFor="scheduleNow">Schedule now</Label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        id="scheduleNow"
+                        type="checkbox"
+                        checked={scheduleNow}
+                        onChange={(e) => setScheduleNow(e.target.checked)}
+                        className="h-4 w-4"
+                      />
+                      <span className="text-sm text-gray-600">
+                        {scheduleNow ? "Start immediately" : "Schedule for later"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="startDate">Start Date</Label>
                     <Input
                       id="startDate"
@@ -314,7 +367,8 @@ export default function CreateGroupQuiz() {
                       onChange={(e) =>
                         handleQuizChange("startDate", e.target.value)
                       }
-                      required
+                      required={!scheduleNow}
+                      disabled={scheduleNow}
                     />
                   </div>
                   <div className="space-y-2">
@@ -326,7 +380,8 @@ export default function CreateGroupQuiz() {
                       onChange={(e) =>
                         handleQuizChange("startTime", e.target.value)
                       }
-                      required
+                      required={!scheduleNow}
+                      disabled={scheduleNow}
                     />
                   </div>
                   <div className="space-y-2">
@@ -338,7 +393,8 @@ export default function CreateGroupQuiz() {
                       onChange={(e) =>
                         handleQuizChange("endDate", e.target.value)
                       }
-                      required
+                      required={!scheduleNow}
+                      disabled={scheduleNow}
                     />
                   </div>
                   <div className="space-y-2">
@@ -350,25 +406,20 @@ export default function CreateGroupQuiz() {
                       onChange={(e) =>
                         handleQuizChange("endTime", e.target.value)
                       }
-                      required
+                      required={!scheduleNow}
+                      disabled={scheduleNow}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="durationInMinutes">
-                      Duration (minutes)
+                      Total Duration (minutes)
                     </Label>
                     <Input
                       id="durationInMinutes"
-                      type="number"
-                      min={1}
-                      value={quiz.durationInMinutes}
-                      onChange={(e) =>
-                        handleQuizChange(
-                          "durationInMinutes",
-                          Number(e.target.value)
-                        )
-                      }
-                      required
+                      value={durationInMinutes}
+                      readOnly
+                      className="bg-gray-100 cursor-not-allowed"
+                      tabIndex={-1}
                     />
                   </div>
                   <div className="space-y-2">
@@ -425,6 +476,7 @@ export default function CreateGroupQuiz() {
                           <TableHead className="w-1/2">Question</TableHead>
                           <TableHead>Options</TableHead>
                           <TableHead>Correct</TableHead>
+                          <TableHead className="w-32">Time (min)</TableHead>
                           <TableHead>Report</TableHead>
                           <TableHead>Remove</TableHead>
                         </TableRow>
@@ -484,6 +536,22 @@ export default function CreateGroupQuiz() {
                               ) : (
                                 <span className="text-muted-foreground">-</span>
                               )}
+                            </TableCell>
+                            <TableCell className="w-32">
+                              <Input
+                                type="number"
+                                min={1}
+                                step={1}
+                                value={questionTimeById[q._id] ?? 1}
+                                onChange={(e) => {
+                                  const raw = Number(e.target.value);
+                                  setQuestionTimeById((prev) => ({
+                                    ...prev,
+                                    [q._id]: raw > 0 && Number.isFinite(raw) ? raw : 1,
+                                  }));
+                                }}
+                                className="h-8 text-xs"
+                              />
                             </TableCell>
                             <TableCell>
                               <Button
