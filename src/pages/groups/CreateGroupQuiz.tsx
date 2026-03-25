@@ -61,6 +61,8 @@ export default function CreateGroupQuiz() {
   const [questionTimeById, setQuestionTimeById] = useState<Record<string, number>>(
     {}
   );
+  // Bulk-applied per-question time (still allows per-question overrides).
+  const [bulkQuestionMinutes, setBulkQuestionMinutes] = useState<number>(1);
   const [questionsDialogOpen, setQuestionsDialogOpen] = useState(false);
   const [questionLang, setQuestionLang] = useState<"en" | "hi">("en");
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
@@ -146,7 +148,7 @@ export default function CreateGroupQuiz() {
   };
 
   const totalQuestions = questionIds.length;
-  const durationInMinutes = questionIds.reduce((sum, id) => {
+  const totalMinutes = questionIds.reduce((sum, id) => {
     const t = questionTimeById[id] ?? 1;
     return sum + (Number.isFinite(t) ? t : 1);
   }, 0);
@@ -162,7 +164,7 @@ export default function CreateGroupQuiz() {
       });
       return;
     }
-    if (durationInMinutes <= 0) {
+    if (totalMinutes <= 0) {
       toast({
         title: "Invalid duration",
         description: "Please enter a valid time (in minutes) for each question.",
@@ -178,7 +180,7 @@ export default function CreateGroupQuiz() {
         description_hi: quiz.description_hi || undefined,
         scheaduleNow: scheduleNow,
         totalQuestions,
-        durationInMinutes,
+        durationInMinutes: totalMinutes,
         languageOptions: quiz.languageOptions,
         startDate: quiz.startDate,
         startTime: quiz.startTime,
@@ -208,6 +210,19 @@ export default function CreateGroupQuiz() {
         variant: "destructive",
       });
     }
+  };
+
+  const applyBulkTimeToAll = () => {
+    if (questionIds.length === 0) return;
+    const t = Number(bulkQuestionMinutes);
+    const nextTime = Number.isFinite(t) && t >= 0.1 ? t : 0.1;
+    setQuestionTimeById((prev) => {
+      const next = { ...prev };
+      questionIds.forEach((id) => {
+        next[id] = nextTime;
+      });
+      return next;
+    });
   };
 
   if (isGroupLoading) {
@@ -416,7 +431,7 @@ export default function CreateGroupQuiz() {
                     </Label>
                     <Input
                       id="durationInMinutes"
-                      value={durationInMinutes}
+                      value={totalMinutes}
                       readOnly
                       className="bg-gray-100 cursor-not-allowed"
                       tabIndex={-1}
@@ -467,6 +482,45 @@ export default function CreateGroupQuiz() {
                     HI
                   </Button>
                 </div>
+
+                {questionIds.length > 0 && (
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between mb-3">
+                    <div className="flex items-end gap-2">
+                      <div className="space-y-1">
+                        <Label htmlFor="bulkQuestionMinutes" className="text-xs">
+                          Set time for all questions (min)
+                        </Label>
+                        <Input
+                          id="bulkQuestionMinutes"
+                          type="number"
+                          min={0.1}
+                          step={0.1}
+                          value={bulkQuestionMinutes}
+                          onChange={(e) => {
+                            const raw = Number(e.target.value);
+                            setBulkQuestionMinutes(
+                              Number.isFinite(raw) && raw >= 0.1 ? raw : 0.1
+                            );
+                          }}
+                          className="h-8 text-xs w-44"
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={applyBulkTimeToAll}
+                        className="h-8 text-xs"
+                      >
+                        Apply to all
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      You can still override individual question times below.
+                    </p>
+                  </div>
+                )}
+
                 {questionObjs.length > 0 ? (
                   <div className="overflow-x-auto">
                     <Table className="text-xs">
@@ -540,14 +594,15 @@ export default function CreateGroupQuiz() {
                             <TableCell className="w-32">
                               <Input
                                 type="number"
-                                min={1}
-                                step={1}
+                                min={0.1}
+                                step={0.1}
                                 value={questionTimeById[q._id] ?? 1}
                                 onChange={(e) => {
                                   const raw = Number(e.target.value);
                                   setQuestionTimeById((prev) => ({
                                     ...prev,
-                                    [q._id]: raw > 0 && Number.isFinite(raw) ? raw : 1,
+                                    [q._id]:
+                                      raw >= 0.1 && Number.isFinite(raw) ? raw : 0.1,
                                   }));
                                 }}
                                 className="h-8 text-xs"

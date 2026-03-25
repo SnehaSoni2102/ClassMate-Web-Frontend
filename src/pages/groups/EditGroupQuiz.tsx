@@ -70,6 +70,10 @@ export default function EditGroupQuiz() {
 
   const [questionIds, setQuestionIds] = useState<string[]>([]);
   const [questionObjs, setQuestionObjs] = useState<any[]>([]);
+  // When true, backend may ignore scheduling fields.
+  const [scheduleNow, setScheduleNow] = useState(false);
+  // Per-question time in minutes (used to derive total duration).
+  const [questionTimeById, setQuestionTimeById] = useState<Record<string, number>>({});
   const [questionsDialogOpen, setQuestionsDialogOpen] = useState(false);
   const [questionLang, setQuestionLang] = useState<"en" | "hi">("en");
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
@@ -112,7 +116,7 @@ export default function EditGroupQuiz() {
 
   useEffect(() => {
     if (!quizResponse || !(quizResponse as QuizApiResponse).success) return;
-    const apiQuiz = (quizResponse as QuizApiResponse).data;
+    const apiQuiz: any = (quizResponse as any).data;
 
     const startDate = apiQuiz.startDate
       ? new Date(apiQuiz.startDate).toISOString().split("T")[0]
@@ -121,18 +125,43 @@ export default function EditGroupQuiz() {
       ? new Date(apiQuiz.endDate).toISOString().split("T")[0]
       : "";
 
+    // API returns questions as [{ questionId, timeInMinutes }] (or sometimes strings).
+    const rawQuestions: any[] = Array.isArray(apiQuiz.questions) ? apiQuiz.questions : [];
+    const ids: string[] = [];
+    const timeMap: Record<string, number> = {};
+
+    rawQuestions.forEach((q: any) => {
+      if (typeof q === "string") {
+        ids.push(q);
+        timeMap[q] = timeMap[q] ?? 1;
+        return;
+      }
+      const qid = q?.questionId;
+      if (qid) {
+        ids.push(qid);
+        const t = Number(q?.timeInMinutes ?? 1);
+        timeMap[qid] = t > 0 && Number.isFinite(t) ? t : 1;
+      }
+    });
+
+    const totalMinutes = ids.reduce((sum, id) => sum + (timeMap[id] ?? 1), 0);
+    const durationInMinutesSeconds = totalMinutes * 60;
+
     const formQuiz: QuizData = {
       ...apiQuiz,
-      durationInMinutes: Math.floor(apiQuiz.durationInMinutes / 60),
+      totalQuestions: ids.length,
+      durationInMinutes: durationInMinutesSeconds,
       startDate,
       endDate,
       startTime: apiQuiz.startTime || "",
       endTime: apiQuiz.endTime || "",
       languageOptions: apiQuiz.languageOptions || LANGUAGE_OPTIONS,
+      questions: ids,
     };
 
     setQuiz(formQuiz);
-    setQuestionIds(apiQuiz.questions || []);
+    setQuestionIds(ids);
+    setQuestionTimeById(timeMap);
   }, [quizResponse]);
 
   useEffect(() => {
@@ -167,18 +196,36 @@ export default function EditGroupQuiz() {
 
   const handleSaveQuestions = (selected: any[]) => {
     setQuestionObjs(selected);
-    setQuestionIds(selected.map((q) => q._id));
+    const selectedIds = selected.map((q) => q._id);
+    setQuestionIds(selectedIds);
+    // Preserve existing per-question times; default to 1 min for new questions.
+    setQuestionTimeById((prev) => {
+      const next: Record<string, number> = {};
+      selectedIds.forEach((id) => {
+        next[id] = prev[id] ?? 1;
+      });
+      return next;
+    });
     setQuestionsDialogOpen(false);
   };
 
   const handleAddCreatedQuestion = (q: any) => {
     setQuestionObjs((prev) => [...prev, q]);
     setQuestionIds((prev) => [...prev, q._id]);
+    setQuestionTimeById((prev) => ({
+      ...prev,
+      [q._id]: prev[q._id] ?? 1,
+    }));
   };
 
   const handleRemoveQuestion = (questionId: string) => {
     setQuestionObjs((prev) => prev.filter((q) => q._id !== questionId));
     setQuestionIds((prev) => prev.filter((id) => id !== questionId));
+    setQuestionTimeById((prev) => {
+      const next = { ...prev };
+      delete next[questionId];
+      return next;
+    });
   };
 
   const handleReportQuestion = (questionId: string, questionText: string) => {
@@ -187,6 +234,10 @@ export default function EditGroupQuiz() {
   };
 
   const totalQuestions = questionIds.length;
+  const totalMinutes = questionIds.reduce((sum, id) => {
+    const t = questionTimeById[id] ?? 1;
+    return sum + (Number.isFinite(t) && t > 0 ? t : 1);
+  }, 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -199,6 +250,14 @@ export default function EditGroupQuiz() {
       });
       return;
     }
+    if (totalMinutes <= 0) {
+      toast({
+        title: "Invalid duration",
+        description: "Please enter a valid time (in minutes) for each selected question.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       const payload: any = {
@@ -207,13 +266,17 @@ export default function EditGroupQuiz() {
         title_hi: quiz.title_hi || undefined,
         description_hi: quiz.description_hi || undefined,
         totalQuestions,
-        durationInMinutes: quiz.durationInMinutes,
+        scheaduleNow: scheduleNow,
+        durationInMinutes: totalMinutes,
         languageOptions: quiz.languageOptions || LANGUAGE_OPTIONS,
         startDate: quiz.startDate,
         startTime: quiz.startTime,
         endDate: quiz.endDate,
         endTime: quiz.endTime,
-        questions: questionIds,
+        questions: questionIds.map((questionId) => ({
+          questionId,
+          timeInMinutes: questionTimeById[questionId] ?? 1,
+        })),
       };
       if (quiz.exam) payload.exam = quiz.exam;
 
@@ -391,6 +454,21 @@ export default function EditGroupQuiz() {
                     />
                   </div>
                   <div className="space-y-2">
+                    <Label htmlFor="scheduleNow">Schedule now</Label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        id="scheduleNow"
+                        type="checkbox"
+                        checked={scheduleNow}
+                        onChange={(e) => setScheduleNow(e.target.checked)}
+                        className="h-4 w-4"
+                      />
+                      <span className="text-sm text-gray-600">
+                        {scheduleNow ? "Start immediately" : "Schedule for later"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="startDate">Start Date</Label>
                     <Input
                       id="startDate"
@@ -399,7 +477,8 @@ export default function EditGroupQuiz() {
                       onChange={(e) =>
                         handleQuizChange("startDate", e.target.value)
                       }
-                      required
+                      required={!scheduleNow}
+                      disabled={scheduleNow}
                     />
                   </div>
                   <div className="space-y-2">
@@ -411,7 +490,8 @@ export default function EditGroupQuiz() {
                       onChange={(e) =>
                         handleQuizChange("startTime", e.target.value)
                       }
-                      required
+                      required={!scheduleNow}
+                      disabled={scheduleNow}
                     />
                   </div>
                   <div className="space-y-2">
@@ -423,7 +503,8 @@ export default function EditGroupQuiz() {
                       onChange={(e) =>
                         handleQuizChange("endDate", e.target.value)
                       }
-                      required
+                      required={!scheduleNow}
+                      disabled={scheduleNow}
                     />
                   </div>
                   <div className="space-y-2">
@@ -435,23 +516,18 @@ export default function EditGroupQuiz() {
                       onChange={(e) =>
                         handleQuizChange("endTime", e.target.value)
                       }
-                      required
+                      required={!scheduleNow}
+                      disabled={scheduleNow}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="durationInMinutes">Duration (minutes)</Label>
+                    <Label htmlFor="durationInMinutes">Total Duration (minutes)</Label>
                     <Input
                       id="durationInMinutes"
-                      type="number"
-                      min={1}
-                      value={quiz.durationInMinutes}
-                      onChange={(e) =>
-                        handleQuizChange(
-                          "durationInMinutes",
-                          Number(e.target.value)
-                        )
-                      }
-                      required
+                      value={totalMinutes}
+                      readOnly
+                      className="bg-gray-100 cursor-not-allowed"
+                      tabIndex={-1}
                     />
                   </div>
                   <div className="space-y-2">
@@ -507,6 +583,7 @@ export default function EditGroupQuiz() {
                           <TableHead className="w-1/2">Question</TableHead>
                           <TableHead>Options</TableHead>
                           <TableHead>Correct</TableHead>
+                          <TableHead className="w-32">Time (min)</TableHead>
                           <TableHead>Report</TableHead>
                           <TableHead>Remove</TableHead>
                         </TableRow>
@@ -566,6 +643,23 @@ export default function EditGroupQuiz() {
                               ) : (
                                 <span className="text-muted-foreground">-</span>
                               )}
+                            </TableCell>
+                            <TableCell className="w-32">
+                              <Input
+                                type="number"
+                                min={0.1}
+                                step={0.1}
+                                value={questionTimeById[q._id] ?? 1}
+                                onChange={(e) => {
+                                  const raw = Number(e.target.value);
+                                  setQuestionTimeById((prev) => ({
+                                    ...prev,
+                                    [q._id]:
+                                      raw >= 0.1 && Number.isFinite(raw) ? raw : 0.1,
+                                  }));
+                                }}
+                                className="h-8 text-xs"
+                              />
                             </TableCell>
                             <TableCell>
                               <Button
