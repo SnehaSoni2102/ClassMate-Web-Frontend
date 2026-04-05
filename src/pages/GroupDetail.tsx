@@ -514,6 +514,11 @@ const GroupDetail = () => {
                 </Button>
               </Link>
             )}
+            <Link to={`/groups/${id}/quiz/${quiz._id}/active`}>
+              <Button variant="default" size="sm">
+                Live
+              </Button>
+            </Link>
             <Link to={`/groups/${id}/quiz/${quiz._id}`}>
               <Button variant="outline" size="sm">
                 View Details
